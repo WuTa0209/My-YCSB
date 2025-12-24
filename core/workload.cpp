@@ -2,13 +2,6 @@
 #include <random>
 #include <algorithm>
 #include "workload.h"
-// for sys_gettid
-#include <unistd.h>
-#include <sys/syscall.h>
-
-#include <bpf/bpf.h>
-#include <bpf/libbpf.h>
-#include <iostream>
 
 const char* operation_type_name[] = {
 	"UPDATE", "INSERT", "READ", "SCAN", "READ_MODIFY_WRITE"
@@ -105,25 +98,6 @@ bool ZipfianWorkload::has_next_op() {
 	return this->cur_nr_op < this->nr_op;
 }
 
-void fill_bpf_map_with_scan_pid(int pid) {
-	std::string map_path = "/sys/fs/bpf/cache_ext/scan_pids";
-	int map_fd = bpf_obj_get(map_path.c_str());
-	if (map_fd < 0) {
-		std::cerr << "Failed to get map file descriptor from " << map_path
-					<< std::endl;
-		throw std::runtime_error("Failed to get map file descriptor");
-	}
-	// First clear the map
-	int key = pid;
-	fprintf(stderr, "Got thread ID: (key=%d, pid=%d)\n", key, pid);
-	int value = 1;
-	int ret = bpf_map_update_elem(map_fd, &key, &value, BPF_ANY);
-	if (ret < 0) {
-		throw std::runtime_error("Failed to update BPF map");
-	}
-}
-
-
 void ZipfianWorkload::next_op(Operation *op) {
 	if (!this->has_next_op())
 		throw std::invalid_argument("does not have next op");
@@ -139,17 +113,6 @@ void ZipfianWorkload::next_op(Operation *op) {
 		this->op_prop.op[INSERT] = 0;
 		this->op_prop.op[UPDATE] = 0;
 		this->op_prop.op[READ_MODIFY_WRITE] = 0;
-		// fill the scan_pids map with the tid of the thread
-		long tid = syscall(SYS_gettid);
-		if (tid < 0) {
-			throw std::runtime_error("Failed to get thread ID");
-		}
-		// Check the env var ENABLE_BPF_SCAN_MAP
-		char *enable_bpf_scan_map_env = getenv("ENABLE_BPF_SCAN_MAP");
-		if (enable_bpf_scan_map_env != nullptr) {
-			fprintf(stderr, "Got ENABLE_BPF_SCAN_MAP=%s\n", enable_bpf_scan_map_env);
-			fill_bpf_map_with_scan_pid((int)tid);
-		}
 	}
 	if (running_sum += int(this->op_prop.op[UPDATE] * 100), this->op_prop.op[UPDATE] != 0 && op_random_int <= running_sum) {
 		op->type = UPDATE;

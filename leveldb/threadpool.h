@@ -12,21 +12,6 @@
 #include <thread>
 #include <vector>
 
-// BPF
-#include <bpf/bpf.h>
-#include <bpf/libbpf.h>
-
-inline void clear_bpf_map(int map_fd) {
-    // Clearing the map
-    int key;
-    while (bpf_map_get_next_key(map_fd, NULL, &key) == 0) {
-        if (bpf_map_delete_elem(map_fd, &key) != 0) {
-            perror("Failed to delete key");
-            throw std::runtime_error("Failed to delete key");
-        }
-    }
-}
-
 class ThreadPool {
    public:
     ThreadPool(size_t threads) : stop(false) {
@@ -91,26 +76,6 @@ class ThreadPool {
     }
 
     std::vector<pid_t> get_threadpool_pids() const { return thread_pids; }
-
-    void fill_bpf_map_with_pids(std::string map_path) const {
-        int map_fd = bpf_obj_get(map_path.c_str());
-        if (map_fd < 0) {
-            std::cerr << "Failed to get map file descriptor from " << map_path
-                      << std::endl;
-            throw std::runtime_error("Failed to get map file descriptor");
-        }
-        // First clear the map
-        clear_bpf_map(map_fd);
-        for (pid_t pid : thread_pids) {
-            int key = pid;
-            fprintf(stderr, "Got thread ID: (key=%d, pid=%d)\n", key, pid);
-            int value = 1;
-            int ret = bpf_map_update_elem(map_fd, &key, &value, BPF_ANY);
-            if (ret < 0) {
-                throw std::runtime_error("Failed to update BPF map");
-            }
-        }
-    }
 
    private:
     std::vector<std::thread> workers;
