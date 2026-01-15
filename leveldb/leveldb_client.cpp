@@ -105,7 +105,6 @@ int LevelDBClient::do_scan(char *key_buffer, long scan_length) {
 	// fprintf(stderr, "SCAN: Start\n");
 	leveldb::ReadOptions read_options = leveldb::ReadOptions();
 	// If running in cache_ext mode, don't set the is_scan flag
-	// Read the ENABLE_BPF_SCAN_MAP environment variable
 	char* fadvise_hint_str = getenv("ENABLE_SCAN_FADVISE");
 	int fadvise_hint;
 	if (fadvise_hint_str != nullptr) {
@@ -184,7 +183,6 @@ LevelDBFactory::LevelDBFactory(std::string data_dir, std::string options_file,
 	this->data_dir = data_dir;
 	this->print_stats = print_stats;
 	// this->scan_thread_pool_ = std::make_shared<ThreadPool>(nr_thread);
-	// If the ENABLE_BPF_SCAN_MAP environment variable exists, fill the map
 
 
 	fprintf(stderr, "LevelDBFactory: data_dir: %s, print_stats: %d\n",

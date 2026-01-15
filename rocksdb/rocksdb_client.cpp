@@ -60,15 +60,7 @@ int RocksDBClient::do_read(char *key_buffer, char **value) {
 	if (!status.ok()) {
 		fprintf(stderr, "RocksDBClient: read failed, key: %s ret: %s\n", key_buffer, status.ToString().c_str());
 		++key_fails;
-
-#ifdef CONFIG_BPFOF
-		read_options.force_sample = true;
-		status = this->db->Get(read_options, key_buffer, &value_str);
-		if (!status.ok())
-			return -1;
-#else
 		return -1;
-#endif
 	}
 	memcpy(*value, value_str.c_str(), value_str.size());
 	(*value)[value_str.size()] = '\0';
