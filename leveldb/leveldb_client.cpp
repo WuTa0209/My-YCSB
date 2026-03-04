@@ -104,6 +104,11 @@ int LevelDBClient::do_scan(char *key_buffer, long scan_length) {
 
 	// fprintf(stderr, "SCAN: Start\n");
 	leveldb::ReadOptions read_options = leveldb::ReadOptions();
+	// Default scan behavior: avoid polluting LevelDB block cache.
+	// Set ENABLE_SCAN_FILL_CACHE=1 to opt back in for A/B comparison.
+	char* scan_fill_cache_str = getenv("ENABLE_SCAN_FILL_CACHE");
+	read_options.fill_cache = !(scan_fill_cache_str != nullptr &&
+	                            strcmp(scan_fill_cache_str, "1") == 0);
 	// If running in cache_ext mode, don't set the is_scan flag
 	// Read the ENABLE_BPF_SCAN_MAP environment variable
 	char* fadvise_hint_str = getenv("ENABLE_SCAN_FADVISE");
